@@ -1,2 +1,2 @@
 # UnityConsole
-Nice efficient console for UNity
+Nice efficient console for Unity
