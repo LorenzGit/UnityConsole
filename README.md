@@ -2,11 +2,10 @@
 Nice efficient console for Unity.
 Assumes that you have an orthographic camera with size at 300.
 
-# Usage:
-'''c#
-
+# Usage
+```c#
 public class Test : MonoBehaviour {
-    public GameConsole gameConsole;
+  public GameConsole gameConsole;
 
 	// Use this for initialization
 	void Start () {
@@ -33,5 +32,4 @@ public class Test : MonoBehaviour {
         }
 	}
 }
-
-'''
+```
