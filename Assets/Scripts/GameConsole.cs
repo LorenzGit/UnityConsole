@@ -7,7 +7,7 @@ public class GameConsole : MonoBehaviour {
     private static GameConsole _instance;
 
     private const int MaxNumberOfLines = 14; //Number of visible lines on the screen
-    private const int MaxCharsPerLine = 50; //Amount of characters per line
+    private const float CharacterWidth = 37f; //Amount of characters per line
     private const float LineHieght = 40f; //Line height
 
     private Color[] _colors = new Color[2]{Color.white,Color.cyan}; //Color swapping for easier line reading
@@ -34,6 +34,8 @@ public class GameConsole : MonoBehaviour {
     private Dictionary<string, Delegate> _callbacks = new Dictionary<string, Delegate>(); //All callback actions
     private Dictionary<string, string> _callbackDescriptions = new Dictionary<string, string>(); //Callbacks descriptions
     private bool _isInitialized;
+    private RectTransform _rectTransform;
+    private int _maxCharsPerLine;
 
     public void Initialize () {
         if (_isInitialized == false) {
@@ -50,6 +52,8 @@ public class GameConsole : MonoBehaviour {
                 _textGameObjects.Add(textObjectClone.GetComponent<Text>());
             }
 
+            _rectTransform = this.gameObject.GetComponent<RectTransform>();
+            CalculateMaxCharsPerLine();
             _contentRectTranform = this.transform.Find("ScrollView/Viewport/Content").GetComponent<RectTransform>();
             _scrollRect = this.transform.Find("ScrollView").GetComponent<ScrollRect>();
             _scrollRect.onValueChanged.AddListener(delegate { UpdateScroller(); });
@@ -69,6 +73,10 @@ public class GameConsole : MonoBehaviour {
 
             UpdateScroller();
         }
+    }
+
+    private void CalculateMaxCharsPerLine() {
+        _instance._maxCharsPerLine = ( int )( CharacterWidth * ( _instance._rectTransform.sizeDelta.x / _instance._rectTransform.sizeDelta.y ) );
     }
 
     private void UpdateScroller() {
@@ -99,9 +107,9 @@ public class GameConsole : MonoBehaviour {
             for (int i = 0; i < lines.Length; i++) {
                 string currentLine = lines[i];
                 while (currentLine.Length > 0) {
-                    if (currentLine.Length > MaxCharsPerLine) {
-                        _consoleStrings.Add(new ConsoleString(currentLine.Substring(0, MaxCharsPerLine), color ));
-                        currentLine = currentLine.Remove(0, MaxCharsPerLine);
+                    if (currentLine.Length > _maxCharsPerLine) {
+                        _consoleStrings.Add(new ConsoleString(currentLine.Substring(0, _maxCharsPerLine ), color ));
+                        currentLine = currentLine.Remove(0, _maxCharsPerLine );
                     }
                     else {
                         _consoleStrings.Add(new ConsoleString(currentLine, color ));
@@ -180,6 +188,7 @@ public class GameConsole : MonoBehaviour {
     public static void OpenConsole() {
         if ( _instance != null ) {
             if (_instance.gameObject.activeSelf == false) {
+                _instance.CalculateMaxCharsPerLine();
                 _instance.gameObject.SetActive( true );
                 _instance._scrollRect.verticalScrollbar.value = 0f;
                 _instance.SetContentPosition();
