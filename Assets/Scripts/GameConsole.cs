@@ -7,7 +7,7 @@ public class GameConsole : MonoBehaviour {
     private static GameConsole _instance;
 
     private const int MaxNumberOfLines = 14; //Number of visible lines on the screen
-    private const float CharacterWidth = 37f; //Amount of characters per line
+    private const float CharacterWidth = 40f; //Amount of characters per line
     private const float LineHieght = 40f; //Line height
 
     private Color[] _colors = new Color[2]{Color.white,Color.cyan}; //Color swapping for easier line reading
@@ -124,7 +124,7 @@ public class GameConsole : MonoBehaviour {
 
     private void SetContentPosition() {
         _contentRectTranform.sizeDelta = new Vector2( _contentRectTranform.sizeDelta.x, LineHieght * _consoleStrings.Count );
-        if (_scrollRect.verticalScrollbar.value < 0.01f) {
+        if (_scrollRect.verticalScrollbar.value < 0.01f || _scrollRect.verticalScrollbar.value > 0.99f ) {
             float position = Mathf.Max(0f, _contentRectTranform.sizeDelta.y - this.GetComponent<RectTransform>().sizeDelta.y + 55f);
             _contentRectTranform.localPosition = new Vector3(_contentRectTranform.localPosition.x, position, 0f);
             UpdateScroller();
