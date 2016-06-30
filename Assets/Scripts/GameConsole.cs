@@ -4,19 +4,16 @@ using System.Collections.Generic;
 using UnityEngine.UI;
 
 public class GameConsole : MonoBehaviour {
-    public static GameConsole instance;
+    private static GameConsole _instance;
 
-    private const int MaxNumberOfLines = 14;
-    private const int MaxCharsPerLine = 70;
-    private const float LineHieght = 40f;
+    private const int MaxNumberOfLines = 14; //Number of visible lines on the screen
+    private const int MaxCharsPerLine = 50; //Amount of characters per line
+    private const float LineHieght = 40f; //Line height
 
-    private Color[] _colors = new Color[2]
-    {
-        Color.white,
-        Color.cyan
-    };
-    private int _currentColor = 0;
+    private Color[] _colors = new Color[2]{Color.white,Color.cyan}; //Color swapping for easier line reading
+    private int _currentColor = 0; //Current line color
 
+    //Struct to hold info about each line.
     private struct ConsoleString {
         public string text;
         public Color color;
@@ -27,45 +24,55 @@ public class GameConsole : MonoBehaviour {
         }
     }
 
-    private readonly List<Text> _textGameObjects = new List<Text>();
-    private List<ConsoleString> _consoleStrings = new List<ConsoleString>();
+    private readonly List<Text> _textGameObjects = new List<Text>(); //Hold MaxNumberOfLines in Text
+    private List<ConsoleString> _consoleStrings = new List<ConsoleString>(); //Holds all the strings ever logged
 
-    private int _currentLine = 0;
-    private RectTransform _contentRectTranform;
-    private ScrollRect _scrollRect;
-    private InputField _inputTextField;
-    private Dictionary<string, Action> _callbacks = new Dictionary<string, Action>();
-    private Dictionary<string, string> _callbackDescriptions = new Dictionary<string, string>();
+    private int _currentLine = 0; //Current line at the top
+    private RectTransform _contentRectTranform; //Content holder
+    private ScrollRect _scrollRect; //Scroller
+    private InputField _inputTextField; //Input
+    private Dictionary<string, Delegate> _callbacks = new Dictionary<string, Delegate>(); //All callback actions
+    private Dictionary<string, string> _callbackDescriptions = new Dictionary<string, string>(); //Callbacks descriptions
+    private bool _isInitialized;
 
-    void Awake () {
-        instance = this;
-        GameObject textObject = transform.Find("ScrollView/Viewport/Content/Text").gameObject;
-        _textGameObjects.Add( textObject.GetComponent<Text>() );
-	    for (int i = 1; i < MaxNumberOfLines; i++) {
-	        GameObject textObjectClone = Instantiate(textObject);
-            textObjectClone.transform.SetParent(textObject.transform.parent, false);
-            textObjectClone.transform.localPosition = new Vector3(5f, -LineHieght * i, 0f);
-            _textGameObjects.Add( textObjectClone.GetComponent<Text>() );
+    public void Initialize () {
+        if (_isInitialized == false) {
+            _isInitialized = true;
+            _instance = this;
+
+            //Initialize all the Text lines too pool
+            GameObject textObject = transform.Find("ScrollView/Viewport/Content/Text").gameObject;
+            _textGameObjects.Add(textObject.GetComponent<Text>());
+            for (int i = 1; i < MaxNumberOfLines; i++) {
+                GameObject textObjectClone = Instantiate(textObject);
+                textObjectClone.transform.SetParent(textObject.transform.parent, false);
+                textObjectClone.transform.localPosition = new Vector3(5f, -LineHieght*i, 0f);
+                _textGameObjects.Add(textObjectClone.GetComponent<Text>());
+            }
+
+            _contentRectTranform = this.transform.Find("ScrollView/Viewport/Content").GetComponent<RectTransform>();
+            _scrollRect = this.transform.Find("ScrollView").GetComponent<ScrollRect>();
+            _scrollRect.onValueChanged.AddListener(delegate { UpdateScroller(); });
+            _inputTextField = this.gameObject.transform.Find("InputField").GetComponent<InputField>();
+            //_inputTextField.onEndEdit.AddListener(delegate { OnSendButtonClicked(); });
+
+            this.gameObject.transform.Find("SendButton").GetComponent<Button>().onClick.AddListener( delegate { OnSendButtonClicked(); } );
+            this.gameObject.transform.Find("CloseButton").GetComponent<Button>().onClick.AddListener( delegate { CloseConsole(); } );
+
+            Application.logMessageReceived += HandleLog; //Everytime you write Debug.Log somewhere this handles it.
+
+            AddCallback("help", (Action) ShowAllCallbacks, "Show all recorded commands"); //if you write help in the input it shows all the registered callbacks
+            AddCallback("clear", (Action) ClearConsole, "Clears the console");
+            AddCallback("multiply", (Action<string, string>) Multiply2Numbers, "Multiply 2 numbers, usage: multiply 2 4");
+
+            Debug.Log("Write 'help' for a list of commands...");
+
+            UpdateScroller();
         }
-
-        _contentRectTranform = this.transform.Find( "ScrollView/Viewport/Content" ).GetComponent<RectTransform>();
-        _scrollRect = this.transform.Find("ScrollView").GetComponent<ScrollRect>();
-        _scrollRect.onValueChanged.AddListener( delegate { UpdateScroller(); } );
-        _inputTextField = this.gameObject.transform.Find("InputField").GetComponent<InputField>();
-        _inputTextField.onEndEdit.AddListener( delegate { OnSendButtonClicked(); } );
-
-        Application.logMessageReceived += HandleLog;
-        
-        AddCallback( "help", ShowAllCallbacks, "Show all recorded commands" );
-        AddCallback( "clear", ClearConsole, "Clears the console" );
-
-        Log( "Write 'help' for a list of commands..." );
-
-        UpdateScroller();
     }
 
     private void UpdateScroller() {
-        float percentage = 1 - _scrollRect.verticalScrollbar.value;
+        float percentage = 1 - _scrollRect.verticalScrollbar.value; //For some reason Unity decided that it made sense to invert the value parameters ._.
         _currentLine = (int)Math.Max(0, Mathf.Ceil( percentage*(float)(_consoleStrings.Count- MaxNumberOfLines ) ));
         //Debug.Log( "GameConsoleDebug " + percentage+", "+ _currentLine );
 
@@ -85,6 +92,7 @@ public class GameConsole : MonoBehaviour {
             Color color = _colors[_currentColor];
             if (type == LogType.Warning) { color = Color.yellow; }
             else if (type == LogType.Error) { color = Color.red; }
+            else if (type == LogType.Assert) { color = Color.green; }
 
             string s = logString;
             string[] lines = s.Split(new string[] {"\r\n", "\n"}, StringSplitOptions.None);
@@ -101,62 +109,105 @@ public class GameConsole : MonoBehaviour {
                     }
                 }
             }
-
+            
             SetContentPosition();
         }
     }
 
     private void SetContentPosition() {
         _contentRectTranform.sizeDelta = new Vector2( _contentRectTranform.sizeDelta.x, LineHieght * _consoleStrings.Count );
-        float position = Mathf.Max(0f, _contentRectTranform.sizeDelta.y - this.GetComponent<RectTransform>().sizeDelta.y + 55f);
-        _contentRectTranform.localPosition = new Vector3( _contentRectTranform.localPosition.x, position, 0f );
-        UpdateScroller();
-    }
-
-    public void OnSendButtonClicked() {
-        if (_inputTextField.text != "") {
-            string s = _inputTextField.text;
-            _inputTextField.text = "";
-            Log(s);
+        if (_scrollRect.verticalScrollbar.value < 0.01f) {
+            float position = Mathf.Max(0f, _contentRectTranform.sizeDelta.y - this.GetComponent<RectTransform>().sizeDelta.y + 55f);
+            _contentRectTranform.localPosition = new Vector3(_contentRectTranform.localPosition.x, position, 0f);
+            UpdateScroller();
         }
-        _inputTextField.Select();
-        _inputTextField.ActivateInputField();
     }
 
-    public void Log(string s) {
-        Debug.Log( s );
-        foreach (KeyValuePair<string, Action> keyValue in _callbacks) {
-            if (keyValue.Key == s) {
-                keyValue.Value();
+    private void OnSendButtonClicked() {
+        if (_isInitialized) {
+            if (_inputTextField.text != "") {
+                string s = _inputTextField.text;
+                _inputTextField.text = "";
+                Log(s);
+            }
+            _inputTextField.Select();
+            _inputTextField.ActivateInputField();
+        }
+    }
+
+    private void Log(string s) {
+        bool isCommand = false;
+        string[] args = s.Split(new string[] {" "}, StringSplitOptions.None);
+        foreach (KeyValuePair<string, Delegate> keyValue in _callbacks) {
+            if (keyValue.Key == args[0] ) {
+                isCommand = true;
+                Debug.LogAssertion("COMMAND: "+s);
+
+                object[] arr = new object[args.Length-1];
+                for (int i = 1; i < args.Length; i++) {
+                    arr[i - 1] = args[i]; //TODO: this only accepts signatures with strings, please extend it.
+                }
+                try {
+                    keyValue.Value.DynamicInvoke(arr);
+                }
+                catch {
+                    Debug.LogError("Parameters do not match method signature, make sure to only use strings!");
+                }
+            }
+        }
+        if ( isCommand == false) {
+            Debug.LogError( "UNKNOWN COMMAND: "+ s );
+        }
+    }
+
+    void Update() {
+        if (Input.GetKeyDown(KeyCode.Return)) {
+            if (this.gameObject.activeSelf) {
+                OnSendButtonClicked();
             }
         }
     }
 
-    public void OnCloseButtonClicked() {
-        this.gameObject.SetActive(false);
-    }
+    // Public methods
 
-    public void OpenConsole() {
-        if (this.gameObject.activeSelf == false) {
-            this.gameObject.SetActive(true);
+    //-------
+    public static void CloseConsole() {
+        if (_instance != null) {
+            _instance.gameObject.SetActive(false);
         }
     }
 
-    public void AddCallback( string s, Action callBack, string description = "" ) {			
-		_callbacks[s] = callBack;
-        _callbackDescriptions[s] = description;
-	}
-
-    public void RemoveCallback( string s) {			
-	    _callbacks.Remove(s);
-        _callbackDescriptions.Remove( s );
+    public static void OpenConsole() {
+        if ( _instance != null ) {
+            if (_instance.gameObject.activeSelf == false) {
+                _instance.gameObject.SetActive( true );
+                _instance._scrollRect.verticalScrollbar.value = 0f;
+                _instance.SetContentPosition();
+            }
+        }
     }
+
+    //Adds a callback that can hold many parametrs, the signature of the method has to be either empty or contain all strings
+    public static void AddCallback( string s, Delegate callBack, string description = "" ) {
+        if ( _instance != null ) {
+            _instance._callbacks[s] = callBack;
+            _instance._callbackDescriptions[s] = description;
+        }
+    }
+
+    public static void RemoveCallback( string s) {
+        if ( _instance != null ) {
+            _instance._callbacks.Remove(s);
+            _instance._callbackDescriptions.Remove(s);
+        }
+    }
+    //------
 
     //callbacks
     private void ShowAllCallbacks(){
-        Log("Writing all callbacks recorded:");
+        Debug.Log("Writing all commands recorded:");
         foreach (KeyValuePair<string, string> keyValue in _callbackDescriptions) {
-            Log(keyValue.Key + " - "+keyValue.Value);
+            Debug.Log("'"+keyValue.Key+"'" + " - "+ keyValue.Value);
         }
 	}
 
@@ -168,5 +219,9 @@ public class GameConsole : MonoBehaviour {
             _textGameObjects[i].text = "";
         }
         SetContentPosition();
+    }
+    
+    private void Multiply2Numbers(string x, string y) {
+        Debug.Log("Multiplication result: "+ (int.Parse(x)*int.Parse(y)) );
     }
 }
