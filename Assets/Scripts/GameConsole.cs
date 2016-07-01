@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.UI;
 
 public class GameConsole : MonoBehaviour {
@@ -67,7 +68,7 @@ public class GameConsole : MonoBehaviour {
 
             AddCallback("help", (Action) ShowAllCallbacks, "Show all recorded commands"); //if you write help in the input it shows all the registered callbacks
             AddCallback("clear", (Action) ClearConsole, "Clears the console");
-            AddCallback("multiply", (Action<string, string>) Multiply2Numbers, "Multiply 2 numbers, usage: multiply 2 4");
+            AddCallback("multiply", (Action<int, int>) Multiply2Numbers, "Multiply 2 numbers, usage: multiply 2 4");
 
             Debug.Log("Write 'help' for a list of commands...");
 
@@ -155,8 +156,25 @@ public class GameConsole : MonoBehaviour {
                 for (int i = 1; i < args.Length; i++) {
                     arr[i - 1] = args[i]; //TODO: this only accepts signatures with strings, please extend it.
                 }
-                try {
-                    keyValue.Value.DynamicInvoke(arr);
+
+
+                try
+                {
+
+                    //get signiture of the method demands
+                    var methodSig = keyValue.Value.Method.GetParameters();
+
+                    //build a parameter list
+                    var paraList = new object[methodSig.Length];
+
+                    for (int i = 0; i < paraList.Length; i++)
+                    {
+                        //get type for the parameter and cast it
+                        var type = methodSig[i].ParameterType;
+                        paraList[i] = Convert.ChangeType(args[i + 1], type);
+                    }
+
+                    keyValue.Value.DynamicInvoke(paraList);
                 }
                 catch {
                     Debug.LogError("Parameters do not match method signature, make sure to only use strings!");
@@ -196,13 +214,14 @@ public class GameConsole : MonoBehaviour {
         }
     }
 
-    //Adds a callback that can hold many parametrs, the signature of the method has to be either empty or contain all strings
+    //Adds a callback that can hold many parameters, the signature of the method has to be either empty or contain all strings
     public static void AddCallback( string s, Delegate callBack, string description = "" ) {
         if ( _instance != null ) {
             _instance._callbacks[s] = callBack;
             _instance._callbackDescriptions[s] = description;
         }
     }
+
 
     public static void RemoveCallback( string s) {
         if ( _instance != null ) {
@@ -230,7 +249,7 @@ public class GameConsole : MonoBehaviour {
         SetContentPosition();
     }
     
-    private void Multiply2Numbers(string x, string y) {
-        Debug.Log("Multiplication result: "+ (int.Parse(x)*int.Parse(y)) );
+    private void Multiply2Numbers(int x, int y) {
+        Debug.Log("Multiplication result: "+ (x * y)) ;
     }
 }
