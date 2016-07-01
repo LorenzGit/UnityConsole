@@ -161,15 +161,15 @@ public class GameConsole : MonoBehaviour {
                 try
                 {
 
-                    //get signiture of the method demands
+                    //get signiture of the delegate
                     var methodSig = keyValue.Value.Method.GetParameters();
 
-                    //build a parameter list
+                    //build a parameter list to pass to the delegate
                     var paraList = new object[methodSig.Length];
 
                     for (int i = 0; i < paraList.Length; i++)
                     {
-                        //get type for the parameter and cast it
+                        //get type for the parameter and cast it from our string
                         var type = methodSig[i].ParameterType;
                         paraList[i] = Convert.ChangeType(args[i + 1], type);
                     }
