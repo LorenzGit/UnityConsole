@@ -179,13 +179,13 @@ public class GameConsole : MonoBehaviour
 	}
 
 
-	/// <summary>
-	/// Adds a callback for the console. Callback method signature can either be empty or contain all strings
-	/// </summary>
-	/// <param name="s">Name of the console command.</param>
-	/// <param name="callBack">Callback.</param>
-	/// <param name="description">Description.</param>
-	public static void AddCallback (string s, Delegate callback, string description = "")
+    /// <summary>
+    /// Adds a callback for the console. Callback method signature can either be empty or contain all strings
+    /// </summary>
+    /// <param name="s">Name of the console command.</param>
+    /// <param name="callback">Callback.</param>
+    /// <param name="description">Description.</param>
+    public static void AddCallback (string s, Delegate callback, string description = "")
 	{
 		if (_instance != null) {
 			_instance._callbacks [s] = new ConsoleCallback {
@@ -425,14 +425,29 @@ public class GameConsole : MonoBehaviour
 				string[] arr = new string[args.Length - 1];
 				Array.Copy (args, 1, arr, 0, arr.Length);
 
-				// try to call the callback
-				try {
-					keyValue.Value.callback.DynamicInvoke (arr);
-				} catch {
-					Debug.LogError ("Parameters do not match method signature, make sure to only use strings!");
-				}
+				try
+                {
+                    //get signature of the delegate
+                    var methodSig = keyValue.Value.callback.Method.GetParameters();
 
-				break;
+                    //build a parameter list to pass to the delegate
+                    var paraList = new object[methodSig.Length];
+
+                    for (int i = 0; i < paraList.Length; i++)
+                    {
+                        //get type for the parameter and cast it from our string
+                        var type = methodSig[i].ParameterType;
+                        paraList[i] = Convert.ChangeType(args[i + 1], type);
+                    }
+
+                    keyValue.Value.callback.DynamicInvoke(paraList);
+                }
+                catch
+                {
+                    Debug.LogError("Parameters do not match method signature !");
+                }
+
+                break;
 			}
 		}
 
