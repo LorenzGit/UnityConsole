@@ -19,11 +19,11 @@ public class Test : MonoBehaviour {
         Debug.LogWarning( "Warning" );
         Debug.LogError( "Error" );
 
-        GameConsole.AddCallback( "divide", ( Action<string, string> )Divide2Numbers, "Divide 2 numbers, usage: divide 2 4" );
+        GameConsole.AddCallback( "divide", ( Action<float, float> )Divide2Numbers, "Divide 2 floats, usage: divide 1.5 3" );
     }
 
-    private void Divide2Numbers( string x, string y ) {
-        Debug.Log( "Division result: " + ( float.Parse( x ) / float.Parse( y ) ) );
+    private void Divide2Numbers(float x, float y){
+        Debug.Log("Division result: " + (x / y));
     }
 
     // Update is called once per frame
