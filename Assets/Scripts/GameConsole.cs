@@ -416,38 +416,34 @@ public class GameConsole : MonoBehaviour
 		// split the args
 		string[] args = Regex.Split (s, "\\s+");
 
-		foreach (KeyValuePair<string, ConsoleCallback> keyValue in _callbacks) {
-			if (keyValue.Key == args [0]) {
-				isCommand = true;
-				Debug.LogAssertion ("COMMAND: " + s);
+		if(_callbacks.ContainsKey(args[0])){
+			isCommand = true;
+			Debug.LogAssertion ("COMMAND: " + s);
 
-				// remove the first element from the args
-				string[] arr = new string[args.Length - 1];
-				Array.Copy (args, 1, arr, 0, arr.Length);
+			// remove the first element from the args
+			string[] arr = new string[args.Length - 1];
+			Array.Copy (args, 1, arr, 0, arr.Length);
 
-				try
-                {
-                    //get signature of the delegate
-                    var methodSig = keyValue.Value.callback.Method.GetParameters();
+			try
+			{
+				//get signature of the delegate
+				var methodSig = _callbacks[args[0]].callback.Method.GetParameters();
 
-                    //build a parameter list to pass to the delegate
-                    var paraList = new object[methodSig.Length];
+				//build a parameter list to pass to the delegate
+				var paraList = new object[methodSig.Length];
 
-                    for (int i = 0; i < paraList.Length; i++)
-                    {
-                        //get type for the parameter and cast it from our string
-                        var type = methodSig[i].ParameterType;
-                        paraList[i] = Convert.ChangeType(args[i + 1], type);
-                    }
+				for (int i = 0; i < paraList.Length; i++)
+				{
+					//get type for the parameter and cast it from our string
+					var type = methodSig[i].ParameterType;
+					paraList[i] = Convert.ChangeType(args[i + 1], type);
+				}
 
-                    keyValue.Value.callback.DynamicInvoke(paraList);
-                }
-                catch
-                {
-                    Debug.LogError("Parameters do not match method signature !");
-                }
-
-                break;
+				_callbacks[args[0]].callback.DynamicInvoke(paraList);
+			}
+			catch
+			{
+				Debug.LogError("Parameters do not match method signature !");
 			}
 		}
 
@@ -455,7 +451,6 @@ public class GameConsole : MonoBehaviour
 			Debug.LogError ("UNKNOWN COMMAND: " + s);
 		}
 	}
-
 
 	/// <summary>
 	/// Update method. Right now only detects "enter" key.
