@@ -2,6 +2,8 @@
 Nice efficient console for Unity.
 Assumes that you have an orthographic camera with size at 320.
 
+[Package](UnityConsole.unitypackage)
+
 ![alt tag](UnityConsole.gif)
 
 # Usage
