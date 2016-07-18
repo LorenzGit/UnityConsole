@@ -149,15 +149,34 @@ public class GameConsole : MonoBehaviour
 	/// </summary>
 	private int _maxCharsPerLine;
 
-	#endregion
+    #endregion
 
 
-	#region Public methods
+    #region Public methods
+  
+    /// <summary>
+    /// Opens or Closes the console
+    /// </summary>
+    public static void ToggleConsole()
+    {
+        if (_instance != null )
+        {
+            if (_instance.gameObject.activeSelf == false)
+            {
+                OpenConsole();
+            }
+            else
+            {
+                CloseConsole();
+            }
+        }
+    }
 
-	/// <summary>
-	/// Opens the console
-	/// </summary>
-	public static void OpenConsole ()
+
+    /// <summary>
+    /// Opens the console
+    /// </summary>
+    public static void OpenConsole ()
 	{
 		if (_instance != null && _instance.gameObject.activeSelf == false) {
 			_instance.CalculateMaxCharsPerLine ();
@@ -193,13 +212,35 @@ public class GameConsole : MonoBehaviour
 				description = description
 			};
 		}
-	}
+    }
 
-	/// <summary>
-	/// Removes a callback
-	/// </summary>
-	/// <param name="s">S.</param>
-	public static void RemoveCallback (string s)
+    /// <summary>
+    /// Adds a callback for the console. Callback method signature can either be empty or contain all strings
+    /// </summary>
+    /// <param name="s">Name of the console command.</param>
+    /// <param name="callback">Callback.</param>
+    /// <param name="description">Description.</param>
+    public static void AddCallback(string s, Action callback, string description = "")
+    {
+        AddCallback(s, (Delegate)callback, description);
+    }
+
+    /// <summary>
+    /// Adds a callback for the console. Callback method signature can either be empty or contain all strings
+    /// </summary>
+    /// <param name="s">Name of the console command.</param>
+    /// <param name="callback">Callback.</param>
+    /// <param name="description">Description.</param>
+    public static void AddCallback(string s, Action<string> callback, string description = "")
+    {
+        AddCallback(s, (Delegate)callback, description);
+    }
+
+    /// <summary>
+    /// Removes a callback
+    /// </summary>
+    /// <param name="s">S.</param>
+    public static void RemoveCallback (string s)
 	{
 		if (_instance != null) {
 			_instance._callbacks.Remove (s);
