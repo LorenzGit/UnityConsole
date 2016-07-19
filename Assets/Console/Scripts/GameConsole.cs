@@ -341,7 +341,7 @@ public class GameConsole : MonoBehaviour
 	/// </summary>
 	private void CalculateMaxCharsPerLine ()
 	{
-		_instance._maxCharsPerLine = (int)(CharacterWidth * (_instance._rectTransform.sizeDelta.x / _instance._rectTransform.sizeDelta.y));
+		_instance._maxCharsPerLine = (int)(CharacterWidth * ((float)Screen.width / (float)Screen.height));
 	}
 
 
